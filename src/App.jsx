@@ -207,14 +207,35 @@ export default function App() {
   if (!moversSortKey) return moversRows;
 
   const dir = moversSortDir === "asc" ? 1 : -1;
+  const isTextKey = moversSortKey === "symbol" || moversSortKey === "name";
+
+  const parseSignedNumber = (value) => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : NaN;
+    if (typeof value !== "string") return NaN;
+
+    const normalized = value
+      .trim()
+      .replace(/[−–—]/g, "-")
+      .replace(/,/g, "")
+      .replace(/[%$]/g, "");
+
+    const parsed = Number.parseFloat(normalized);
+    return Number.isNaN(parsed) ? NaN : parsed;
+  };
 
   return [...moversRows].sort((a, b) => {
-    const av = Number(a[moversSortKey]);
-    const bv = Number(b[moversSortKey]);
+    if (isTextKey) {
+      const av = String(a[moversSortKey] ?? "");
+      const bv = String(b[moversSortKey] ?? "");
+      return av.localeCompare(bv) * dir;
+    }
 
-    if (av === null && bv === null) return 0;
-    if (av === null) return 1;
-    if (bv === null) return -1;
+    const av = parseSignedNumber(a[moversSortKey]);
+    const bv = parseSignedNumber(b[moversSortKey]);
+
+    if (Number.isNaN(av) && Number.isNaN(bv)) return 0;
+    if (Number.isNaN(av)) return 1;
+    if (Number.isNaN(bv)) return -1;
 
     return (av - bv) * dir;
   });
@@ -310,7 +331,7 @@ export default function App() {
 
         {showMoversTable && (
         <>
-        <h2 className="sectionTitle">Biggest {normalizeGainersLosers(biggestGainersLosers)}</h2>
+        <h2 className="sectionTitle">Biggest {normalizeGainersLosers(biggestGainersLosers) === 'gainers'? 'Gainers':'Losers'}</h2>
 
         <MoversTable
         rows={moversVisibleRows}
@@ -321,7 +342,7 @@ export default function App() {
               setMoversSortDir((d) => (d === "asc" ? "desc" : "asc"));
             } else {
               setMoversSortKey(key);
-              setMoversSortDir("desc");
+              setMoversSortDir(key === "symbol" || key === "name" ? "asc" : "desc");
             }
           }}
         expandedSymbol={expandedSymbol}
